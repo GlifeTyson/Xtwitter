@@ -30,10 +30,10 @@ const userController = {
   },
   view: async (req, res) => {
     try {
-      const { client, db } = await connectDb();
-      const collectionUser = db.collection("user");
+      const { mongo, db } = await connectDb();
+      // const collectionUser = ("user");
       const { id } = req.params;
-      const currentUser = await collectionUser.findOne({ _id: id });
+      const currentUser = await mongo.User.findOne({ _id: id });
       res.json(currentUser);
     } catch (error) {
       console.log(error);

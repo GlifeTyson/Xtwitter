@@ -51,7 +51,16 @@ const postController = {
     }
   },
   //GET /api/posts/:id
-  view: async (req, res) => {},
+  view: async (req, res) => {
+    try {
+      const { mongo } = req.context || {};
+      const { id } = req.params;
+      const findPost = await mongo.Post.findOne({ _id: new ObjectId(id) });
+      res.status(200).json({ data: findPost });
+    } catch (error) {
+      res.status(422).json({ message: error.message });
+    }
+  },
 
   //POST /api/posts
   create: async (req, res) => {
