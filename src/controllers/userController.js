@@ -1,11 +1,12 @@
 const connectDb = require("../database");
-const userValidator = require("../validator/userValidator");
 const { hashPassword, compareSync } = require("../utils/index");
 const bcrypt = require("bcrypt");
 const omit = require("lodash/omit");
 const { ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 const { generateAccessToken, generateRefreshToken } = require("../utils/token");
+const _ = require("lodash");
+const user = require("../validator/userValidator");
 
 const userController = {
   list: async (req, res) => {
@@ -44,22 +45,22 @@ const userController = {
     const { mongo } = req.context || {};
     const args = req.body;
     // console.log(args);
-    const { error } = userValidator.validate(req.body);
+    const { error } = user.validate(req.body);
     // console.log(value);
     if (error) {
       return res.json({ message: "Fail at validation" }).status(400);
     }
-    if (password !== cPassword) {
+    if (args.password !== args.confirmPassword) {
       return res.json({ message: "Password does not match" });
     }
-    let nameCheck = await mongo.User.findOne({
-      name: args.name,
+    const nameCheck = await mongo.User.findOne({
+      displayName: args.displayName,
       deletedAt: null,
     });
     if (nameCheck) {
       return res.json({ message: "Username have been registed" }).status(400);
     }
-    let emailCheck = await mongo.User.findOne({
+    const emailCheck = await mongo.User.findOne({
       email: args.email,
       deletedAt: null,
     });
@@ -70,7 +71,7 @@ const userController = {
     // res.send("Good at validation").status(200);
     const newUser = {
       _id: new ObjectId(),
-      name: args.name,
+      displayName: args.displayName,
       email: args.email,
       password: hashPassword(args.password),
       createdAt: Date.now(),
@@ -160,7 +161,9 @@ const userController = {
     if (!validPass) {
       return res.json({ message: "Wrong password" }).status(400);
     }
-    res.cookie("Bearer", generateAccessToken(userLogin));
+    // res.cookie("accessToken", generateAccessToken(userLogin));
+    // res.cookie("refreshToken", generateRefreshToken(userLogin));
+
     return res
       .json({
         message: "Login Success",
@@ -172,6 +175,18 @@ const userController = {
         },
       })
       .status(200);
+  },
+  me: async (req, res) => {
+    const { mongo, user } = req.context || {};
+
+    if (!user || _.isEmpty(user)) return res.json({ me: null });
+    const currentUser = await mongo.User.findOne({
+      _id: new ObjectId(user._id),
+    });
+
+    return res.status(200).json({
+      me: omit(currentUser, ["password"]),
+    });
   },
 };
 

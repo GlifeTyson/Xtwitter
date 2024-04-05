@@ -23,6 +23,7 @@ const connectDb = async () => {
   const mongo = {
     User: db.collection("users"),
     Post: db.collection("posts"),
+    Comment: db.collection("comments"),
   };
   return {
     client,

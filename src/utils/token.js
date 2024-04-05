@@ -5,7 +5,7 @@ const token = {
   generateAccessToken: (user) => {
     return jwt.sign(
       {
-        id: user._id,
+        id: user._id, //new objectid
       },
       SECRET_KEY,
       { expiresIn: "1d" }

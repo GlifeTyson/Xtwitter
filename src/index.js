@@ -11,12 +11,9 @@ const postRoute = require("./routes/postRoute");
 var bodyParser = require("body-parser");
 const { SECRET_KEY } = require("./config");
 const { generateRefreshToken } = require("./utils/token");
-
-const corsOptions = {
-  origin: "*",
-  // credentials: true, //access-control-allow-credentials:true
-  // optionSuccessStatus: 200,
-};
+const requiredLogin = require("./middleware/requireLogin");
+const withContext = require("./middleware/withContent");
+const commentRoute = require("./routes/commentRoute");
 
 async function run() {
   try {
@@ -33,13 +30,12 @@ async function run() {
           req.userId = id;
         } catch (err) {
           // const refreshToken = req.headers["x-refresh-token"];
-          const newTokens = await generateRefreshToken(user);
-          if (newTokens) {
-            res.set("Access-Control-Expose-Headers", "x-token");
-            res.set("x-token", newTokens);
-            // res.set("x-refresh-token", newTokens);
-          }
-          req.user = newTokens.user;
+          // const newTokens = await generateRefreshToken(user);
+          // if (newTokens) {
+          //   res.set("Access-Control-Expose-Headers", "x-token");
+          //   res.set("x-token", newTokens);
+          // }
+          // req.user = newTokens.user;
         }
       }
 
@@ -48,45 +44,15 @@ async function run() {
 
     app.use(addUser);
 
-    app.use(async (req, res, next) => {
-      const userId = req.userId;
-      const user = userId
-        ? await mongo.User.findOne({
-            _id: new ObjectId(userId),
-            deletedAt: null,
-          })
-        : null;
-      req.context = {
-        db,
-        mongo,
-        user,
-      };
-      next();
-    });
+    app.use(withContext);
 
-    function requiredLogin(req, res, next) {
-      console.log("run requiredLogin");
-      const { user } = req.context || {};
-      if (!user) {
-        return res
-          .json({
-            message: "Unauthorized",
-          })
-          .status(401);
-      }
-      next();
-    }
-
-    app.use(cors(corsOptions));
+    app.use(express.static(__dirname + "/uploads"));
+    app.use(cors());
     app.use(bodyParser.json()); // for parsing application/json
     app.use(bodyParser.urlencoded({ extended: true }));
     app.use(userRoute);
     app.use(requiredLogin, postRoute);
-    // app.use(uploadRoute);
-    //middleware require user need to login
-    // app.use(requiredLogin, diaryRoute);
-    // app.use(requiredLogin, commentRoute);
-
+    app.use(requiredLogin, commentRoute);
     app.listen(3000, () => {
       console.log("Express Server running on http://localhost:3000");
     });

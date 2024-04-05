@@ -1,5 +1,6 @@
 const { ObjectId } = require("mongodb");
 const Joi = require("joi");
+
 const schema = Joi.object({
   offset: Joi.number().min(0),
   limit: Joi.number().positive(),
@@ -21,7 +22,6 @@ const postController = {
       });
       // console.log(error);
       if (error) {
-        //
         return res.json({ message: error });
       }
       //check if userId user put in is ObjectID ?
@@ -66,7 +66,9 @@ const postController = {
   create: async (req, res) => {
     try {
       const { mongo, user } = req.context || {};
-      const { content, imageUrl } = req.body;
+      const { content } = req.body;
+      const imageUrl = req.file;
+
       if (content.length == 0) {
         return res.status(400).json({ message: "Fill in content" });
       }
@@ -74,10 +76,11 @@ const postController = {
         _id: new ObjectId(),
         userId: user._id,
         content: content,
-        imageUrl: imageUrl ? imageUrl : null,
+        imageUrl: imageUrl ? `/${imageUrl.path}` : null,
         createdAt: Date.now(),
         deletedAt: null,
         updatedAt: null,
+        likeCount: 0,
       };
 
       await mongo.Post.insertOne(postCreate);
@@ -107,8 +110,13 @@ const postController = {
           $set: { content: content, updatedAt: Date.now() },
         }
       );
-      const postUpdated = await mongo.Post.findOne({ _id: parseId });
-      res.status(200).json({ data: postUpdated });
+      if (post.matchedCount === 0) {
+        return res.status(400).json({ message: "Post not found" });
+      }
+
+      // console.log(post);
+      // const postUpdated = await mongo.Post.findOne({ _id: parseId });
+      res.status(200).json({ message: "Updated success" });
     } catch (error) {
       res.status(422).json({ message: error.message });
     }
